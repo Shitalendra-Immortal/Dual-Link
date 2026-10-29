@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MultiLink Booster</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161d29; --panel2: #1d2636; --border: #2a3548;
+    --text: #e6ecf5; --muted: #8b98ad; --accent: #5b9dff; --green: #34d399;
+    --red: #f87171; --amber: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [data-theme="light"] {
+    --bg: #eef1f6; --panel: #ffffff; --panel2: #e8edf5; --border: #d3dae6;
+    --text: #17202f; --muted: #5c6a82;
+  }
+  [data-theme="light"] #log { background: #0d1117; color: #b9c6da; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+    padding: 24px; max-width: 1100px; margin: 0 auto;
+  }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  .pills { display: flex; gap: 8px; margin-left: auto; }
+  .pill {
+    font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px;
+    background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+  }
+  .pill.on { color: #06281c; background: var(--green); border-color: var(--green); }
+  .pill.busy { color: #3a2a00; background: var(--amber); border-color: var(--amber); }
+  section { margin-bottom: 22px; }
+  section > h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted); margin-bottom: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; transition: border-color .2s;
+  }
+  .card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .icon { font-size: 26px; }
+  .name { font-weight: 700; font-size: 15px; }
+  .ip { font-size: 12px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .dot { margin-left: auto; width: 11px; height: 11px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .dot.up { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.down { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .krow { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+  .krow label { color: var(--muted); }
+  .krow b { font-weight: 600; }
+  .live { display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .live div { flex: 1; background: var(--panel2); border-radius: 10px; padding: 8px 10px; }
+  .live small { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .live b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .down-arrow { color: var(--accent); } .up-arrow { color: var(--green); }
+  .hint { color: var(--muted); font-size: 14px; background: var(--panel);
+    border: 1px dashed var(--border); border-radius: 14px; padding: 20px; text-align: center; }
+  .banner { font-size: 13px; background: #2a2200; border: 1px solid var(--amber);
+    color: #fde68a; border-radius: 14px; padding: 12px 16px; margin-bottom: 14px; }
+  .banner.error { background: #2a0d0d; border-color: var(--red); color: #fecaca; }
+  .chart-wrap { background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; }
+  #chart { width: 100%; height: 220px; display: block; }
+  .legend { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  button {
+    background: var(--accent); color: #06121f; border: none; border-radius: 10px;
+    padding: 10px 18px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  button.danger { background: var(--red); color: #2a0808; }
+  .bond-box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .bond-box h3 { font-size: 14px; margin-bottom: 10px; }
+  .bond-box .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .dl-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .dl-row #in-dl-url { flex: 1 1 220px; }
+  input {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 10px 12px; font-size: 14px; flex: 1; min-width: 140px;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  .pipes { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .pipes b { color: var(--text); }
+  #log {
+    background: #0a0e14; border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px; height: 180px; overflow-y: auto; font-family: ui-monospace, monospace;
+    font-size: 12px; line-height: 1.6; color: #b9c6da; white-space: pre-wrap;
+  }
+  .bar { height: 6px; background: var(--panel2); border-radius: 4px;
+    margin: 10px 0 2px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent);
+    border-radius: 4px; transition: width .5s; }
+  #btn-theme { padding: 5px 11px; font-size: 15px; line-height: 1; }
+  @media (max-width: 600px) { body { padding: 14px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>MultiLink <span>Booster</span></h1>
+  <div class="pills">
+    <div class="pill" id="pill-proxy">Proxy off</div>
+    <div class="pill" id="pill-bond">Bond off</div>
+    <button id="btn-theme" class="ghost" onclick="toggleTheme()" title="Toggle light / dark">🌙</button>
+  </div>
+</header>
+
+<div id="err-banner" class="banner error" style="display:none"></div>
+<div id="ext-banner" class="banner" style="display:none">A proxy is already running
+outside this dashboard on 127.0.0.1:8080 (for example from a terminal). The graphs
+here only track a proxy this dashboard starts itself, so they will stay at 0 for
+that traffic. Stop the external proxy first if you want the dashboard to track it.</div>
+
+<section>
+  <h2>Controls</h2>
+  <div class="controls">
+    <button id="btn-detect" class="ghost" onclick="act('/api/detect')">Detect links</button>
+    <button id="btn-test" class="ghost" onclick="act('/api/test')">Test speeds</button>
+    <button id="btn-proxy" onclick="toggleProxy()">Start proxy</button>
+  </div>
+  <div class="bond-box">
+    <h3>True bonding (needs a VPS running bond_server.py)</h3>
+    <div class="row">
+      <input id="in-server" placeholder="VPS IP address">
+      <input id="in-port" placeholder="Port" value="9000" style="max-width:90px">
+    </div>
+    <div class="row">
+      <input id="in-token" placeholder="Token (same as on the server)" type="password">
+      <input id="in-fp" placeholder="TLS fingerprint (optional, from gen_cert.py)">
+    </div>
+    <div class="row">
+      <button id="btn-bond" onclick="toggleBond()">Start bonding</button>
+    </div>
+    <div class="pipes" id="pipes"></div>
+    <div class="note">Bonding opens one encrypted pipe per link and stripes every
+      download across all of them. Apps use SOCKS5 at 127.0.0.1:1080.</div>
+  </div>
+</section>
+
+<section>
+  <h2>Last test</h2>
+  <div class="card" id="test-result"><div class="hint">No test yet &mdash; click <b>Test speeds</b> to see solo speeds, the solo sum, and the combined speed side by side.</div></div>
+</section>
+
+<section>
+  <h2>Diagnose combined speed</h2>
+  <div class="card">
+    <div style="margin-bottom:10px">Runs interleaved solo repeats, then same-file, distinct-range, and single-link-parallel aggregates in one session, and explains which explanation fits. This is the same <b>diagnose</b> command, in the UI.</div>
+    <div class="controls"><button id="btn-diagnose" onclick="startDiagnose()">Diagnose combined speed</button></div>
+    <div id="diag-status" style="margin-top:6px; color:var(--muted); font-size:13px"></div>
+    <div id="diag-variants" style="margin-top:6px; color:var(--muted); font-size:13px"></div>
+    <div id="diag-hints" style="margin-top:6px; font-size:13px"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Links</h2>
+  <div class="grid" id="links"></div>
+</section>
+
+<section>
+  <h2>Live throughput &mdash; download</h2>
+  <div class="chart-wrap">
+    <canvas id="chart"></canvas>
+    <div class="legend" id="legend"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Apps</h2>
+  <div class="grid" id="apps"></div>
+</section>
+
+<section>
+  <h2>One-task download</h2>
+  <div class="card">
+    <div class="note" style="margin-bottom:10px">Download a <b>single file</b> with
+      <b>all links at once</b> — it is split into 16 segments fetched in parallel
+      over Wi-Fi + tether. No proxy setting needed. Saved to your Downloads folder.</div>
+    <div class="dl-row">
+      <input id="in-dl-url" placeholder="https://… paste the file link">
+      <input id="in-dl-name" placeholder="save as (optional)" style="max-width:170px; flex:0 1 170px">
+      <button id="btn-dl" onclick="startDownload()">Download</button>
+    </div>
+    <div id="dl-wrap" style="display:none">
+      <div class="bar"><i id="dl-bar" style="width:0%"></i></div>
+      <div id="dl-text" class="note" style="margin-top:6px"></div>
+      <div id="dl-links" class="note" style="color:var(--muted)"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Activity</h2>
+  <div id="log"></div>
+</section>
+
+<script>
+const $ = id => document.getElementById(id);
+const COLORS = ['#5b9dff', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
+const KIND_ICON = { wifi: '📶', tether: '🔌', ethernet: '🖧', bluetooth: '🔷' };
+
+function fmtBps(bps) {
+  if (!bps || bps < 1000) return (bps || 0).toFixed(0) + ' bps';
+  if (bps < 1e6) return (bps / 1e3).toFixed(1) + ' Kbps';
+  return (bps / 1e6).toFixed(1) + ' Mbps';
+}
+function fmtBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1048576).toFixed(1) + ' MB';
+}
+
+function cssVar(n) {
+  return getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+}
+
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem('ml-theme', t); } catch (e) {}
+  $('btn-theme').textContent = t === 'light' ? '☀️' : '🌙';
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+}
+
+function appIcon(name) {
+  if (/^🌐/.test(name)) return '🌐';
+  const n = name.toLowerCase();
+  if (n.includes('chrome')) return '🌍';
+  if (n.includes('firefox')) return '🦊';
+  if (n.includes('edge')) return '🧭';
+  if (n.includes('code')) return '💻';
+  if (n.includes('python')) return '🐍';
+  return '📦';
+}
+function renderApps(apps) {
+  const el = $('apps');
+  if (!apps.length) {
+    el.innerHTML = '<div class="hint">No app traffic yet — point an app at the proxy (127.0.0.1:8080) and it will show up here with live per-app speeds.</div>';
+    return;
+  }
+  const max = Math.max.apply(null, apps.map(a => a.down_bps + a.up_bps).concat([1]));
+  el.innerHTML = apps.map(a => {
+    const pct = Math.round(100 * (a.down_bps + a.up_bps) / max);
+    const connTxt = a.conns + ' connection' + (a.conns === 1 ? '' : 's');
+    return `<div class="card">
+      <div class="card-top"><span class="icon">${appIcon(a.name)}</span>
+        <div><div class="name">${esc(a.name)}</div><div class="ip">${connTxt}</div></div>
+      </div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="live">
+        <div><small><span class="down-arrow">▼</span> down</small><b>${fmtBps(a.down_bps)}</b><small>${fmtBytes(a.down_total)} total</small></div>
+        <div><small><span class="up-arrow">▲</span> up</small><b>${fmtBps(a.up_bps)}</b><small>${fmtBytes(a.up_total)} total</small></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function refreshApps() {
+  try {
+    const d = await (await fetch('/api/apps')).json();
+    renderApps(d.apps || []);
+  } catch (e) {}
+}
+let ipColor = {};
+function colorFor(ip, i) {
+  if (!ipColor[ip]) ipColor[ip] = COLORS[i % COLORS.length];
+  return ipColor[ip];
+}
+
+
+function showError(msg) {
+  const el = $('err-banner');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function clearError() { $('err-banner').style.display = 'none'; }
+
+async function post(path, body) {
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  return r.json();
+}
+async function act(path) {
+  const r = await post(path);
+  if (!r.ok) { showError(r.error || 'failed'); }
+  refresh();
+}
+
+let proxyOn = false, bondOn = false;
+async function toggleProxy() {
+  const r = await post(proxyOn ? '/api/proxy/stop' : '/api/proxy/start');
+  if (!r.ok) { showError(r.error || 'failed'); }
+  refresh();
+}
+async function toggleBond() {
+  if (bondOn) {
+    await post('/api/bond/stop');
+  } else {
+    const r = await post('/api/bond/start', {
+      server: $('in-server').value, port: $('in-port').value,
+      token: $('in-token').value, fingerprint: $('in-fp').value
+    });
+    if (!r.ok) { showError(r.error || 'failed'); }
+  }
+  refresh();
+}
+
+function renderLinks(links) {
+  const el = $('links');
+  if (!links.length) {
+    el.innerHTML = '<div class="hint">No links yet &mdash; click <b>Detect links</b> to find your Wi-Fi, tethering and Ethernet adapters.</div>';
+    return;
+  }
+  el.innerHTML = links.map((l, i) => {
+    const st = l.status === 'up' ? 'up' : (l.status === 'down' ? 'down' : '');
+    const stText = l.status === 'up' ? 'up' + (l.latency != null ? ' · ' + l.latency + ' ms' : '')
+      : (l.status === 'down' ? 'down' : 'probing…');
+    const totalW = links.reduce((s, x) => s + (x.weight || 1), 0) || 1;
+    const share = Math.round(((l.weight || 1) / totalW) * 100);
+    return `<div class="card" style="border-top: 3px solid ${colorFor(l.ip, i)}">
+      <div class="card-top">
+        <span class="icon">${KIND_ICON[l.kind] || '🌐'}</span>
+        <div><div class="name">${esc(l.name)}</div><div class="ip">${esc(l.ip)}</div></div>
+        <span class="dot ${st}"></span>
+      </div>
+      <div class="krow"><label>status</label><b>${stText}</b></div>
+      <div class="krow"><label>last test</label><b>${esc(l.speed || '—')}</b></div>
+      <div class="krow"><label>traffic share</label><b>${share}%</b></div>
+      <div class="live">
+        <div><small><span class="down-arrow">▼</span> down</small><b>${fmtBps(l.live.down)}</b></div>
+        <div><small><span class="up-arrow">▲</span> up</small><b>${fmtBps(l.live.up)}</b></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function drawChart(history, links) {
+  const c = $('chart'), ctx = c.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = c.clientWidth, H = c.clientHeight;
+  if (c.width !== W * dpr) { c.width = W * dpr; c.height = H * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const padL = 52, padB = 18, padT = 8, padR = 8;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  let max = 1e6;
+  history.forEach(h => Object.values(h.links).forEach(v => { if (v.down > max) max = v.down; }));
+  max *= 1.15;
+  ctx.strokeStyle = cssVar('--border'); ctx.fillStyle = cssVar('--muted');
+  ctx.font = '10px sans-serif'; ctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const y = padT + ih - (ih * g / 4);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.fillText(fmtBps(max * g / 4), 4, y + 3);
+  }
+  if (!history.length) return;
+  const n = history.length;
+  links.forEach((l, i) => {
+    ctx.strokeStyle = colorFor(l.ip, i); ctx.lineWidth = 2;
+    ctx.beginPath();
+    history.forEach((h, j) => {
+      const v = (h.links[l.ip] || { down: 0 }).down;
+      const x = padL + (iw * j / Math.max(1, n - 1));
+      const y = padT + ih - (ih * Math.min(1, v / max));
+      j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+  });
+  // Combined total line (dashed, text colour).
+  ctx.strokeStyle = cssVar('--text'); ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  history.forEach((h, j) => {
+    const tot = Object.values(h.links).reduce((sum, v) => sum + (v.down || 0), 0);
+    const x = padL + (iw * j / Math.max(1, n - 1));
+    const y = padT + ih - (ih * Math.min(1, tot / max));
+    j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.stroke(); ctx.setLineDash([]);
+  $('legend').innerHTML = links.map((l, i) =>
+    `<span><i style="background:${colorFor(l.ip, i)}"></i>${esc(l.name)}</span>`).join('')
+    + `<span><i style="background:${cssVar('--text')}"></i>Combined</span>`;
+}
+
+async function refresh() {
+  try {
+    const s = await (await fetch('/api/status')).json();
+    clearError();
+    $('ext-banner').style.display = s.external_proxy ? 'block' : 'none';
+    const tr = s.test_result;
+    if (tr) {
+      const soloTxt = tr.solo.map(x => `${esc(x.name)} ${x.ok ? x.mbps.toFixed(1) + ' Mbps' : 'failed'}`).join(' + ');
+      const combTxt = tr.combined != null
+        ? `combined ${tr.combined.toFixed(1)} Mbps (${tr.ratio != null ? tr.ratio.toFixed(2) + 'x' : ''} of solo sum)`
+        : 'combined: not measured (need 2+ working links)';
+      $('test-result').innerHTML = `<div><b>Solo:</b> ${esc(soloTxt)}</div><div><b>Solo sum:</b> ${tr.solo_sum.toFixed(1)} Mbps &nbsp;·&nbsp; <b>${esc(combTxt)}</b></div><div style="color:var(--muted); font-size:12px; margin-top:4px">Solo here is one run per link, not the diagnose medians. Use Diagnose for the interleaved comparison.</div>`;
+    }
+    $('btn-diagnose').disabled = !!s.diagnosing;
+    $('btn-diagnose').textContent = s.diagnosing ? 'Diagnosing…' : 'Diagnose combined speed';
+    proxyOn = s.proxy.running; bondOn = s.bond.running;
+    const pp = $('pill-proxy'), bp = $('pill-bond');
+    pp.textContent = proxyOn ? 'Proxy on :8080' : 'Proxy off';
+    pp.className = 'pill' + (proxyOn ? ' on' : '');
+    bp.textContent = bondOn ? 'Bond on :1080' : 'Bond off';
+    bp.className = 'pill' + (bondOn ? ' on' : '');
+    $('btn-proxy').textContent = proxyOn ? 'Stop proxy' : 'Start proxy';
+    $('btn-proxy').className = proxyOn ? 'danger' : '';
+    $('btn-bond').textContent = bondOn ? 'Stop bonding' : 'Start bonding';
+    $('btn-bond').className = bondOn ? 'danger' : '';
+    $('btn-test').disabled = !!s.testing;
+    $('btn-test').textContent = s.testing ? 'Testing…' : 'Test speeds';
+    renderLinks(s.links);
+    drawChart(s.history, s.links);
+    $('pipes').innerHTML = s.bond.pipes.length
+      ? s.bond.pipes.map(p => `<div><b>${esc(p.name)}</b> &nbsp;▼ ${fmtBytes(p.down)} &nbsp;▲ ${fmtBytes(p.up)}</div>`).join('')
+      : (bondOn ? 'connecting pipes…' : '');
+  } catch (e) { /* server hiccup; next tick retries */ }
+}
+
+async function startDownload() {
+  const url = $('in-dl-url').value.trim();
+  if (!url) { showError('Paste a file URL first.'); return; }
+  $('btn-dl').disabled = true;
+  const r = await post('/api/download/start', { url, name: $('in-dl-name').value.trim() });
+  if (!r.ok) showError(r.error || 'download failed to start');
+  $('btn-dl').disabled = false;
+  refreshDl();
+}
+
+async function startDiagnose() {
+  clearError();
+  const r = await post('/api/diagnose');
+  if (!r.ok) showError(r.error || 'diagnosis failed to start');
+  $('diag-status').textContent = r.ok ? 'Diagnosis running… this takes a minute or two on real links.' : '';
+  refreshDiag();
+}
+async function refreshDiag() {
+  try {
+    const d = await (await fetch('/api/diagnose')).json();
+    if (d.running) {
+      $('diag-status').textContent = 'Diagnosis running… this takes a minute or two on real links.';
+      return;
+    }
+    const rep = d.report;
+    if (!rep) return;
+    $('diag-status').textContent = `Done: solo sum ${rep.solo_sum_mbps.toFixed(1)} Mbps. Full report is also saved by the CLI as diagnose-report.json when run from a terminal; in the dashboard it lives in this page and the server log.`;
+    $('diag-variants').textContent = (rep.variants || []).map(v =>
+      v.status === 'ok' || v.status === 'partial' ? `${v.mode}: ${v.mbps.toFixed(1)} Mbps` : `${v.mode}: ${v.status}`).join('  ·  ');
+    $('diag-hints').innerHTML = (rep.hints || []).map(h => `<div>• ${esc(h)}</div>`).join('');
+  } catch (e) {}
+}
+
+async function refreshDl() {
+  try {
+    const d = await (await fetch('/api/download')).json();
+    const w = $('dl-wrap');
+    if (!d || (!d.active && !d.url)) { w.style.display = 'none'; return; }
+    w.style.display = 'block';
+    const pct = d.total ? (d.done / d.total * 100) : 0;
+    $('dl-bar').style.width = (d.total ? pct : 0) + '%';
+    const mbps = (d.mbps || 0).toFixed(1);
+    $('dl-text').textContent =
+      d.status === 'done' ? `Done: ${fmtBytes(d.done)} at ${mbps} Mbps — saved to ${d.dest}` :
+      d.status === 'error' ? `Failed: ${d.error || 'unknown error'}` :
+      d.total ? `${pct.toFixed(1)}% — ${fmtBytes(d.done)} / ${fmtBytes(d.total)} — ${mbps} Mbps` :
+                `${fmtBytes(d.done)} — ${mbps} Mbps`;
+    const pl = d.per_link || {};
+    $('dl-links').textContent = Object.keys(pl).length
+      ? 'per link: ' + Object.entries(pl).map(([k, v]) => `${k}: ${fmtBytes(v)}`).join('  ·  ')
+      : '';
+  } catch (e) {}
+}
+
+let logStick = true;async function refreshLog() {
+  try {
+    const d = await (await fetch('/api/log')).json();
+    const el = $('log');
+    logStick = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    el.textContent = d.log.join('\n');
+    if (logStick) el.scrollTop = el.scrollHeight;
+  } catch (e) {}
+}
+
+let savedTheme = 'dark';
+try { savedTheme = localStorage.getItem('ml-theme') || 'dark'; } catch (e) {}
+applyTheme(savedTheme);
+refresh(); refreshLog(); refreshApps(); refreshDl();
+setInterval(refresh, 1000);
+setInterval(refreshLog, 2000);
+setInterval(refreshApps, 2000);
+setInterval(refreshDl, 1000);
+setInterval(refreshDiag, 2000);
+refreshDiag();
+</script>
+</body>
+</html>
